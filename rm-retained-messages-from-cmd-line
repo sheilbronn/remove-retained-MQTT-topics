@@ -1,0 +1,18 @@
+#!/bin/sh
+
+# rm-retained-messages-from-cmd-line
+#
+# removes retained MQTT topics one by one from a list given on the command line (first string on each line)
+#
+# Remarks:
+# 1. If you want to use a non-standard broker pass it as the first parameter on the command line.
+# 2. For the sake of safety not more that deletion is performed per second
+#
+# Examples:
+# mosquitto_sub -v -t homie/\#         | grep -E '/\$'      | rm-retained-messages-from-cmd-line
+# mosquitto_sub -v -t homeassistant/\# | grep -E '/config ' | rm-retained-messages-from-cmd-line
+
+[ "$1" ] && MQTTBROKER="-h ${1}"
+
+awk '/^[a-zA-Z]/ { if ( $2=="(null)" ) next;  print $1 ; if (system("sleep 1")) exit(4) }  { next }' | \
+  xargs --verbose -r -L 1 -I'{}' mosquitto_pub $MQTTBROKER -r -t '{}' -m ''
