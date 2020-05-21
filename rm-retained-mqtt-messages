@@ -1,30 +1,28 @@
 #!/bin/ash
 # shellcheck shell=dash
 #
-# Remove Homie Device from MQTT
+# Remove Homie devices (or other retained stuff) from a MQTT broker
 # 
-# Simple Script to remove all reatined messages for a homie device, effectively removing the device from MQTT.
-# The script get all topics "below" a device e.g homie/a020a615f72c/$mac and
-# send a NULL message with mosquitto_pub to the topic. This removes the retained 
+# Simple script to remove all retained messages for a homie device, effectively removing the autodiscovery stuff for a device.
+# The script gets all the topics "below" a device, e.g homie/a020a615f72c/$mac and
+# then sends a NULL message with mosquitto_pub to each topic. This removes the retained 
 # message and the topic will not show up anymore. 
-#
-# How? 
-# mosquitto_pub -r -n --> sends an empty retained message, which clears the retained message and therefor the topic
+# It works for homie as well as homeassistant stuff and other topic passed as the 2nd argument
 #
 # Example:
-# $ ./clear-retained-messags.sh a020a615f72c
+# $ ./rm-retained-mqtt-messages test.mosquitto.org homie/device001
 #
-# Clearing for device a020a615f72c all messages, last clean will block kill with Ctrl+C when nothing happens anymore.
+# Clearing for device device001 all messages, last clean will block kill with Ctrl+C when nothing happens anymore.
 # 
 # STARTING :: Checking for valid topics one after the other....
 #  0 Checking for Topic ....
-#    homie/a020a615f72c/$homie >> sending empty payload to topic with retained flag
+#    homie/device001/$homie   >> sending empty payload to topic with retained flag
 #  1 Checking for Topic ....
-#    homie/a020a615f72c/$mac >> sending empty payload to topic with retained flag
+#    homie/device001/$mac     >> sending empty payload to topic with retained flag
 #  2 Checking for Topic ....
-#    homie/a020a615f72c/$name >> sending empty payload to topic with retained flag
+#    homie/device001/$name    >> sending empty payload to topic with retained flag
 #  3 Checking for Topic ....
-#    homie/a020a615f72c/$localip >> sending empty payload to topic with retained flag
+#    homie/device001/$localip >> sending empty payload to topic with retained flag
 #
 
 MQTTBROKER="${1:-localhost}"
