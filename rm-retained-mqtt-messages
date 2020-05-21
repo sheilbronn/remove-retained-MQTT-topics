@@ -1,0 +1,58 @@
+#!/bin/ash
+# shellcheck shell=dash
+#
+# Remove Homie Device from MQTT
+# 
+# Simple Script to remove all reatined messages for a homie device, effectively removing the device from MQTT.
+# The script get all topics "below" a device e.g homie/a020a615f72c/$mac and
+# send a NULL message with mosquitto_pub to the topic. This removes the retained 
+# message and the topic will not show up anymore. 
+#
+# How? 
+# mosquitto_pub -r -n --> sends an empty retained message, which clears the retained message and therefor the topic
+#
+# Example:
+# $ ./clear-retained-messags.sh a020a615f72c
+#
+# Clearing for device a020a615f72c all messages, last clean will block kill with Ctrl+C when nothing happens anymore.
+# 
+# STARTING :: Checking for valid topics one after the other....
+#  0 Checking for Topic ....
+#    homie/a020a615f72c/$homie >> sending empty payload to topic with retained flag
+#  1 Checking for Topic ....
+#    homie/a020a615f72c/$mac >> sending empty payload to topic with retained flag
+#  2 Checking for Topic ....
+#    homie/a020a615f72c/$name >> sending empty payload to topic with retained flag
+#  3 Checking for Topic ....
+#    homie/a020a615f72c/$localip >> sending empty payload to topic with retained flag
+#
+
+MQTTBROKER="${1:-localhost}"
+DEVICENAME="openhabianpi"
+DEVROOT=homeassistant
+DEVROOT=homie
+TOPIC="${2:-$DEVROOT/$DEVICENAME}"
+
+echo 
+echo "Clearing for device $DEVICENAME all messages,"
+echo "  last clean will block kill with Ctrl+C when nothing happens anymore."
+echo 
+#mosquitto_sub -v -h $MQTTBROKER -t "$DEVROOT/$DEVICENAME/#" -C $2
+echo "STARTING :: Checking for valid topics one after the other...."
+
+# will stop after 50 topics, run script again for more
+MAX_TOPICS_TO_CHECK=${3:-50}
+
+# set -x
+for cnt in $( seq 0 $MAX_TOPICS_TO_CHECK )
+    do
+    # echo "  $cnt Checking for Topic ...."
+    for i in $( mosquitto_sub -v -h $MQTTBROKER  -t "$TOPIC/#" -C 1 | cut -d' ' -f1 )
+        do  
+            # echo "mosquitto_pub -h $MQTTBROKER -r -n -t \"`echo $i | sed s#'\\$'#'\\\\\\\$'#g`\"" 
+            echo " ($cnt) $i >> sending empty payload to topic with retained flag"
+            # set -x
+            mosquitto_pub -h $MQTTBROKER  -r -n -t "$( echo $i | sed s#'\\$'#'\\\$'#g )" 
+            set +x
+        done
+done

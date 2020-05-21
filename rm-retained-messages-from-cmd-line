@@ -13,7 +13,7 @@
 # mosquitto_sub -v -t homeassistant/\# | grep -E '/config '  | rm-retained-messages-from-cmd-line
 #
 # Implementation remarks:
-# a. Multiline mosquitto_sub is avoided by assuming that line with a topic start with /^[a-zA-Z]/ , others are discarded
+# a. Multiline mosquitto_sub output is mitigated by assuming that line with a topic start with /^[a-zA-Z]/ , others are discarded
 # b. MQTT message body must not be "(null)"
 # c. At most one deletion per second for safety reasons.
 
