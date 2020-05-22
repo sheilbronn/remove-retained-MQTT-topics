@@ -4,10 +4,11 @@
 # Remove Homie devices (or other retained stuff) from a MQTT broker
 # 
 # Simple script to remove all retained messages for a homie device, effectively removing the autodiscovery stuff for a device.
-# The script gets all the topics "below" a device, e.g homie/a020a615f72c/$mac and
+# The script gets all the topics "below the device", e.g homie/a020a615f72c/$mac and
 # then sends a NULL message with mosquitto_pub to each topic. This removes the retained 
-# message and the topic will not show up anymore. 
-# It works for homie as well as homeassistant stuff and other topic passed as the 2nd argument
+# message and the topic will not show up as reatined anymore. 
+# It works for homie as well as homeassistant stuff and other topic passed as the 2nd argument.
+# The first argument may passed empty, i.e. as "", or left away. In this case, mosquitto will use its defaults.
 #
 # Example:
 # $ ./rm-retained-mqtt-messages test.mosquitto.org homie/device001
@@ -25,29 +26,25 @@
 #    homie/device001/$localip >> sending empty payload to topic with retained flag
 #
 
-MQTTBROKER="${1:-localhost}"
+[ "$1" ] && MQTTBROKER="-h $1"
 DEVICENAME="openhabianpi"
 DEVROOT=homeassistant
 DEVROOT=homie
 TOPIC="${2:-$DEVROOT/$DEVICENAME}"
-
-echo 
-echo "Clearing for device $DEVICENAME all messages,"
-echo "  last clean will block kill with Ctrl+C when nothing happens anymore."
-echo 
-#mosquitto_sub -v -h $MQTTBROKER -t "$DEVROOT/$DEVICENAME/#" -C $2
-echo "STARTING :: Checking for valid topics one after the other...."
-
-# will stop after 50 topics, run script again for more
 MAX_TOPICS_TO_CHECK=${3:-50}
 
-# set -x
-for cnt in $( seq 0 "$MAX_TOPICS_TO_CHECK" )
+echo 
+echo "Removing max *$MAX_TOPICS_TO_CHECK* retained messages for topic *$TOPIC*${MQTTBROKER:+ (broker: $MQTTBROKER)},"
+echo "  script will block when nothing left. Break with Ctrl+C ! "
+echo 
+echo "STARTING :: Checking for valid topics one after another..."
+
+for cnt in $( seq 1 "$MAX_TOPICS_TO_CHECK" )
     do
-    # echo "  $cnt Checking for Topic ...."
-    for i in $( mosquitto_sub -v -h $MQTTBROKER  -t "$TOPIC/#" -C 1 | cut -d' ' -f1 )
+    for line in "$( mosquitto_sub -v $MQTTBROKER -t "$TOPIC/#" -C 1 )"
         do  
-            echo " ($cnt) $i >> emptying..."
-            mosquitto_pub -h $MQTTBROKER  -r -n -t "$( echo $i | sed s#'\\$'#'\\\$'#g )" 
+            topic="$( echo "$line" | cut -d' ' -f1 )"
+            echo " ($cnt) Removing: $topic  "
+            mosquitto_pub $MQTTBROKER  -r -n -t "$( echo "$topic" | sed 's#\\$#\\\$#g' )" 
         done
 done
