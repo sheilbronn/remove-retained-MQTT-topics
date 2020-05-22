@@ -30,24 +30,22 @@ DEVICENAME="openhabianpi"
 DEVROOT=homeassistant
 DEVROOT=homie
 TOPIC="${2:-$DEVROOT/$DEVICENAME}"
-
-echo 
-echo "Clearing for device $DEVICENAME all messages,"
-echo "  last clean will block kill with Ctrl+C when nothing happens anymore."
-echo 
-#mosquitto_sub -v -h $MQTTBROKER -t "$DEVROOT/$DEVICENAME/#" -C $2
-echo "STARTING :: Checking for valid topics one after the other...."
-
 # will stop after 50 topics, run script again for more
 MAX_TOPICS_TO_CHECK=${3:-50}
 
+echo 
+echo "Removing max *$MAX_TOPICS_TO_CHECK* retained messages for topic *$TOPIC* (broker: $MQTTBROKER),"
+echo "  script will block when nothing left. Break with Ctrl+C ! "
+echo 
+echo "STARTING :: Checking for valid topics one after another..."
+
 # set -x
-for cnt in $( seq 0 "$MAX_TOPICS_TO_CHECK" )
+for cnt in $( seq 1 "$MAX_TOPICS_TO_CHECK" )
     do
-    # echo "  $cnt Checking for Topic ...."
-    for i in $( mosquitto_sub -v -h $MQTTBROKER  -t "$TOPIC/#" -C 1 | cut -d' ' -f1 )
+    for line in "$( mosquitto_sub -v -h "$MQTTBROKER"  -t "$TOPIC/#" -C 1 )"
         do  
-            echo " ($cnt) $i >> emptying..."
-            mosquitto_pub -h $MQTTBROKER  -r -n -t "$( echo $i | sed s#'\\$'#'\\\$'#g )" 
+            topic="$( echo "$line" | cut -d' ' -f1 )"
+            echo " ($cnt) Removing: $topic"
+            mosquitto_pub -h $MQTTBROKER  -r -n -t "$( echo "$topic" | sed 's#\\$#\\\$#g' )" 
         done
 done
